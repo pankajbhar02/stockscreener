@@ -18,7 +18,7 @@ def ABC(folder_path):
 
 # Download the Nifty 500 list
   nifty500_df = pd.read_csv(
-      "https://archives.nseindia.com/content/indices/ind_nifty500list.csv")
+      "https://archives.nseindia.com/content/indices/ind_nifty50list.csv")
   symbols = nifty500_df['Symbol'].tolist()
 
   # Iterate over files in the folder
