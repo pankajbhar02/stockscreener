@@ -1,12 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[6]:
-"""
- Holiday list based on Zipline calendar library's holiday calendar
- Reference:    https://github.com/quantopian/trading_calendars/blob/master/trading_calendars/exchange_calendar_xbom.py
-"""
-
 holidays_str = [
     '1997-01-23',
     '1997-03-07',
@@ -355,61 +346,56 @@ holidays_str = [
     '2022-10-26',
     '2022-11-08',
     '2023-01-26',
-    '2023-02-18',  # weekend
+    '2023-02-18', # weekend
     '2023-03-07',
     '2023-03-30',
     '2023-04-04',
     '2023-04-07',
     '2023-04-14',
-    '2023-04-22',  # weekend
+    '2023-04-22', # weekend
     '2023-05-01',
     '2023-06-29',
-    '2023-07-29',  # weekend
+    '2023-07-29', # weekend
     '2023-08-15',
     '2023-09-19',
     '2023-10-02',
     '2023-10-24',
-    '2023-11-12',  # weekend
+    '2023-11-12', # weekend
     '2023-11-14',
     '2023-11-27',
     '2023-12-25'
-]
+    ]
 
 from datetime import datetime
 
-holidays_date = [
-    datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in holidays_str
-]
+holidays_date = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in holidays_str]
 
-# In[18]:
+
+# In[2]:
+
 
 import pandas as pd
 from datetime import datetime, timedelta
 
 # Set the start and end dates
-end_date = datetime(2023, 1, 1).date()
-start_date = datetime.now().date()
-
-# Get the current datetime
+end_date = datetime(2023, 5, 1).date()
 current_datetime = datetime.now()
 
-# Check if the current time is before 20:00 hours
-if current_datetime.time() < datetime.strptime('20:00:00', '%H:%M:%S').time():
-  # Exclude the current date
-  current_date = current_datetime.date()
+# Check if the current time is after 8 PM and before or until 12 AM
+if current_datetime.hour >= 20 or current_datetime.hour < 24:
+    # If current time is after 12 AM, remove the current date from the list
+    start_date = datetime.now().date() - timedelta(days=1)
 else:
-  current_date = start_date
+    start_date = datetime.now().date()
 
 # Create an empty list to store workday dates
 workday_dates = []
 
 # Loop through the dates from start to end, excluding weekends, holidays, and current date (if applicable)
-# current_date -= timedelta(days=1)  # Move one day back from the current date
-while current_date > end_date:
-  if current_date.weekday(
-  ) < 5 and current_date not in holidays_date:  # Monday to Friday (0-4) and not a holiday
-    workday_dates.append(current_date)
-  current_date -= timedelta(days=1)
+while start_date > end_date:
+    if start_date.weekday() < 5 and start_date not in holidays_date:  # Monday to Friday (0-4) and not a holiday
+        workday_dates.append(start_date)
+    start_date -= timedelta(days=1)
 
 # Reverse the list to get the dates in ascending order
 workday_dates.reverse()
@@ -420,99 +406,40 @@ df_workdates = pd.DataFrame({'Workdate': workday_dates})
 # Print the DataFrame
 print(df_workdates)
 
-# In[ ]:
 
-import datetime
+# In[3]:
+
+
 import os
-import pandas as pd
+
 import requests
 
-# Define the base URL
+
+# Step 2: Download the Nifty 50 stock list
+nifty50_list_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
+nifty50_list_df = pd.read_csv(nifty50_list_url)
+nifty50_symbols = nifty50_list_df['Symbol'].tolist()
+
+# Step 3 and 4: Download and save historical stock data for Nifty 50 stocks
 base_url = "https://archives.nseindia.com/products/content/sec_bhavdata_full_"
+folder_name = "nifty50_data"  # Change the folder name as desired
 
-# Create the folder if it doesn't exist
-folder_name = "bhav_copy"
 if not os.path.exists(folder_name):
-  os.makedirs(folder_name)
+    os.makedirs(folder_name)
 
-# Iterate over the dates in the DataFrame
 for index, row in df_workdates.iterrows():
-  # Get the date from the DataFrame
-  current_date = row["Workdate"]
+    # Get the date from the DataFrame
+    current_date = row["Workdate"]
 
-  # Generate the formatted date
-  formatted_date = current_date.strftime("%d%m%Y")
+    # Generate the formatted date
+    formatted_date = current_date.strftime("%d%m%Y")
 
-  # Construct the URL
-  url = base_url + formatted_date + ".csv"
+    # Construct the URL
+    url = base_url + formatted_date + ".csv"
 
-  # Download the file
-  response = requests.get(url)
-  file_path = os.path.join(folder_name, formatted_date + ".csv")
-  with open(file_path, "wb") as file:
-    print(f"Downloading symbol: {formatted_date}")
-    file.write(response.content)
-    print(f"Data for {formatted_date} downloaded and saved as {file_path}")
-
-# In[ ]:
-
-import os
-import pandas as pd
-
-
-def append_csv_to_dataframe(folder_path):
-  dfs = []
-  for file_name in os.listdir(folder_path):
-    if file_name.endswith(".csv"):
-      file_path = os.path.join(folder_path, file_name)
-      df = pd.read_csv(file_path)
-      # Strip leading and trailing whitespaces from column names
-      df.columns = df.columns.str.strip()
-      # Filter symbols where SERIES column is 'EQ'
-      df = df[df['SERIES'].str.strip() == 'EQ']
-      # Convert date column to date format
-      df['DATE1'] = pd.to_datetime(df['DATE1'], format=' %d-%b-%Y')
-      dfs.append(df)
-  appended_df = pd.concat(dfs, ignore_index=True)
-  return appended_df
-
-
-def create_symbol_dataframes(appended_df, output_folder):
-  if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
-  grouped_df = appended_df.groupby("SYMBOL")
-  for symbol, group in grouped_df:
-    symbol_file_path = os.path.join(output_folder, symbol + ".csv")
-    group.set_index("DATE1", inplace=True)
-    group.sort_index(ascending=True, inplace=True)
-    # Rename columns in symbol-specific DataFrame
-    group.rename(columns={
-        'DATE1': 'Date',
-        'OPEN_PRICE': 'Open',
-        'CLOSE_PRICE': 'Close',
-        'HIGH_PRICE': 'High',
-        'LOW_PRICE': 'Low'
-    },
-                 inplace=True)
-    group.to_csv(symbol_file_path)
-    print(f"Saved symbol {symbol} to {symbol_file_path}")
-
-
-# Specify the folder where the CSV files are located
-csv_folder = "bhav_copy"
-
-# Append CSV files into a single DataFrame
-appended_df = append_csv_to_dataframe(csv_folder)
-
-# Specify the folder to save the symbol-specific DataFrames
-output_folder = "NSE_data"
-
-# Create the output folder if it doesn't exist
-if not os.path.exists(output_folder):
-  os.makedirs(output_folder)
-  print(f"Created folder: {output_folder}")
-
-# Create separate DataFrames based on the SYMBOL and save them
-create_symbol_dataframes(appended_df, output_folder)
-
-# In[ ]:
+    # Download the file
+    response = requests.get(url)
+    file_path = os.path.join(folder_name, formatted_date + ".csv")
+    with open(file_path, "wb") as file:
+        print(f"Downloading data for: {formatted_date}")
+        file.write(response.content)

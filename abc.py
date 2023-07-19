@@ -17,9 +17,9 @@ def ABC(folder_path):
     os.makedirs(ma_folder)
 
 # Download the Nifty 500 list
-  nifty500_df = pd.read_csv(
+  nifty50_df = pd.read_csv(
       "https://archives.nseindia.com/content/indices/ind_nifty50list.csv")
-  symbols = nifty500_df['Symbol'].tolist()
+  symbols = nifty50_df['Symbol'].tolist()
 
   # Iterate over files in the folder
   for file_name in os.listdir(folder_path):
